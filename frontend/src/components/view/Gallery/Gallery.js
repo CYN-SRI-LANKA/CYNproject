@@ -1,231 +1,335 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
-// import axios from 'axios';
+import axios from 'axios';
 import Header from '../Headers/Header';
 import Footer from '../Footer';
-
-import hrm from '../../image/hrm.png';
-import tour1 from '../../image/tour1.JPG';
-import tour2 from '../../image/tour2.JPG';
-import tour3 from '../../image/tour3.JPG';
-import eye from '../../image/eye.jpeg';
-import sound from '../../image/sound.jpg';
-import club from '../../image/club.jpg';
-import blood from '../../image/blood.jpeg';
-import bloodd from '../../image/bloodd.png';
-import kite from '../../image/kite.jpg';
-import common from '../../image/common.jpg';
-import webinar from '../../image/webinar.png';
-import glocal from '../../image/glocal.png';
-import meeting from '../../image/meeting.jpg';
-import galadari from '../../image/galadari.png';
-
-
+import './Gallery.css'; // We'll create this for additional styling
 
 const Gallery = () => {
+    // State management
+    const [galleryItems, setGalleryItems] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [pagination, setPagination] = useState({});
+    const [loadingMore, setLoadingMore] = useState(false);
 
+    const API_BASE_URL = 'http://localhost/CYNproject/backend/api';
 
-  return (
-    <div>
-         <Header/>
-        
-         <div class="container text-center">
-            <div class="row">
-            <h3 class="text-uppercase" style= {{ margin : "130px 0px 60px 0px", fontWeight:"bold", textAlign:"center" , fontWeight : "800"}}>Gallery</h3>
-              
+    // Fetch categories on component mount
+    useEffect(() => {
+        fetchCategories();
+        fetchGalleryItems();
+    }, []);
+
+    // Fetch new items when category changes
+    useEffect(() => {
+        if (selectedCategory !== 'all') {
+            fetchGalleryItems(0, true);
+        }
+    }, [selectedCategory]);
+
+    const fetchCategories = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/gallery/categories.php`);
+            if (response.data.success) {
+                setCategories([
+                    { category: 'all', count: 0 },
+                    ...response.data.data
+                ]);
+            }
+        } catch (err) {
+            console.error('Error fetching categories:', err);
+        }
+    };
+
+    const fetchGalleryItems = async (offset = 0, reset = false) => {
+        try {
+            if (offset === 0) setLoading(true);
+            else setLoadingMore(true);
+
+            const params = {
+                limit: 12,
+                offset: offset
+            };
+
+            if (selectedCategory !== 'all') {
+                params.category = selectedCategory;
+            }
+
+            const response = await axios.get(`${API_BASE_URL}/gallery/index.php`, { params });
+
+            if (response.data.success) {
+                if (reset || offset === 0) {
+                    setGalleryItems(response.data.data);
+                } else {
+                    setGalleryItems(prev => [...prev, ...response.data.data]);
+                }
+                setPagination(response.data.pagination);
+                setError(null);
+            }
+        } catch (err) {
+            setError('Failed to fetch gallery items. Please try again later.');
+            console.error('Error fetching gallery:', err);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+        }
+    };
+
+    const handleCategoryChange = (category) => {
+        setSelectedCategory(category);
+        setGalleryItems([]);
+    };
+
+    const loadMore = () => {
+        if (pagination.has_more) {
+            fetchGalleryItems(pagination.offset + pagination.limit);
+        }
+    };
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    const generateSlug = (title) => {
+        return title.toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+    };
+
+    // Loading component
+    const LoadingSpinner = () => (
+        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+            <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+                <span className="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    );
+
+    // Error component
+    const ErrorMessage = ({ message }) => (
+        <div className="alert alert-danger text-center mx-auto" style={{ maxWidth: '600px' }}>
+            <h5>Oops! Something went wrong</h5>
+            <p>{message}</p>
+            <button className="btn btn-outline-danger" onClick={() => fetchGalleryItems()}>
+                Try Again
+            </button>
+        </div>
+    );
+
+    // Gallery card component
+    const GalleryCard = ({ item }) => (
+        <div className="col-lg-4 col-md-6 col-sm-12 mb-4">
+            <div 
+                className="card gallery-card h-100"
+                style={{
+                    boxShadow: "2px 2px 10px rgba(0,0,0,0.1)",
+                    transition: "transform 0.3s ease-in-out"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-5px)"}
+                onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
+            >
+                <div className="position-relative">
+                    <img 
+                        src={item.thumbnail_url || item.image_url} 
+                        className="card-img-top" 
+                        alt={item.title}
+                        style={{ 
+                            height: '200px', 
+                            objectFit: 'cover',
+                            width: '100%'
+                        }}
+                        loading="lazy"
+                    />
+                    {item.category && (
+                        <span 
+                            className="badge bg-primary position-absolute top-0 start-0 m-2"
+                            style={{ fontSize: '0.75rem' }}
+                        >
+                            {item.category}
+                        </span>
+                    )}
+                </div>
+                
+                <div className="card-body d-flex flex-column">
+                    <h6 
+                        className="card-title" 
+                        style={{ 
+                            fontWeight: "bold", 
+                            textAlign: "left",
+                            marginBottom: "15px",
+                            lineHeight: "1.4"
+                        }}
+                    >
+                        {item.title}
+                    </h6>
+                    
+                    {item.description && (
+                        <p 
+                            className="card-text text-muted small"
+                            style={{ 
+                                flexGrow: 1,
+                                overflow: 'hidden',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: 'vertical'
+                            }}
+                        >
+                            {item.description}
+                        </p>
+                    )}
+
+                    {item.tags && item.tags.length > 0 && (
+                        <div className="mb-3">
+                            {item.tags.slice(0, 3).map((tag, index) => (
+                                <span 
+                                    key={index}
+                                    className="badge bg-light text-dark me-1 mb-1"
+                                    style={{ fontSize: '0.7rem' }}
+                                >
+                                    {tag.trim()}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                    
+                    <div className="mt-auto d-flex justify-content-between align-items-center">
+                        <Link 
+                            to={`/gallery/${generateSlug(item.title)}`}
+                            className="btn btn-primary btn-sm"
+                            style={{ fontSize: '0.875rem' }}
+                        >
+                            See More
+                        </Link>
+                        <small className="text-muted">
+                            {formatDate(item.created_at)}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <Header />
             
-            
-              <div class="col">
-                <div class="card" style={{width:"330px", height:"480px",margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={hrm} class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                    <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>International Professional Study Tour for Human Resource Management Students - Malaysia <br/><br/> 19th to 25rd of February 2025</h6>
-                    <a href="/viewhrm" style = {{ margin : "90px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
+            <div className="container">
+                {/* Page Header */}
+                <div className="row">
+                    <div className="col-12">
+                        <h3 
+                            className="text-uppercase text-center" 
+                            style={{ 
+                                margin: "130px 0px 60px 0px", 
+                                fontWeight: "800",
+                                color: "#2c3e50"
+                            }}
+                        >
+                            Gallery
+                        </h3>
+                    </div>
                 </div>
-              </div>
-              
-              
 
-              <div class="col">
-                <div class="card" style={{width:"330px", height:"480px",margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={galadari} class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                    <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>Bharat Sri Lanka higher education summit in Colombo organised by Association of Indian Universities AIU & SAPE Events & Media Pvt ltd in association with  High Commission of India to Sri Lanka and Ministry of Education Government of Sri Lanka. <br/><br/> 28th of January 2025</h6>
-                    <a href="/galadari" style = {{ margin : "15px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div>
+                {/* Category Filter */}
+                {categories.length > 1 && (
+                    <div className="row mb-4">
+                        <div className="col-12">
+                            <div className="d-flex flex-wrap justify-content-center gap-2">
+                                {categories.map((cat) => (
+                                    <button
+                                        key={cat.category}
+                                        className={`btn ${selectedCategory === cat.category 
+                                            ? 'btn-primary' 
+                                            : 'btn-outline-primary'
+                                        } btn-sm`}
+                                        onClick={() => handleCategoryChange(cat.category)}
+                                        style={{ 
+                                            borderRadius: '20px',
+                                            fontSize: '0.875rem'
+                                        }}
+                                    >
+                                        {cat.category === 'all' ? 'All Events' : cat.category}
+                                        {cat.count > 0 && ` (${cat.count})`}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
-              <div class="col">
-                <div class="card" style={{width:"330px", height:"480px",margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={tour1} class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                    <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>International Professional Study Tour for Professinal Psychological Counsellors - Malaysia <br/><br/> 17th to 23rd of July 2024</h6>
-                    <a href="/viewgallery1" style = {{ margin : "90px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div>
+                {/* Gallery Content */}
+                {loading && galleryItems.length === 0 ? (
+                    <LoadingSpinner />
+                ) : error ? (
+                    <ErrorMessage message={error} />
+                ) : galleryItems.length === 0 ? (
+                    <div className="row">
+                        <div className="col-12 text-center">
+                            <div className="alert alert-info">
+                                <h5>No Events Found</h5>
+                                <p>No events are available in this category at the moment.</p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {/* Gallery Grid */}
+                        <div className="row">
+                            {galleryItems.map((item, index) => (
+                                <GalleryCard key={`${item.id}-${index}`} item={item} />
+                            ))}
+                        </div>
+
+                        {/* Load More Button */}
+                        {pagination.has_more && (
+                            <div className="row">
+                                <div className="col-12 text-center mb-5">
+                                    <button 
+                                        className="btn btn-outline-primary btn-lg"
+                                        onClick={loadMore}
+                                        disabled={loadingMore}
+                                        style={{ 
+                                            borderRadius: '25px',
+                                            padding: '12px 30px'
+                                        }}
+                                    >
+                                        {loadingMore ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                Loading...
+                                            </>
+                                        ) : (
+                                            'Load More Events'
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Gallery Stats */}
+                        <div className="row">
+                            <div className="col-12 text-center mb-4">
+                                <small className="text-muted">
+                                    Showing {galleryItems.length} of {pagination.total} events
+                                    {selectedCategory !== 'all' && ` in "${selectedCategory}"`}
+                                </small>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
+            <Footer />
+        </div>
+    );
+};
 
-
-            <div class="row">
-            <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={tour2}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>International Study Tour for Psychology and Counselling Students - Malaysia <br/><br/> 05th to 10th of November 2024</h6>
-                    <a href="/viewgallery2" style = {{ margin : "90px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div> 
-
-              <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={tour3}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>International Study Tour for Professional Beauticians - <br/> Malaysia <br/><br/>  19th to 25th of November 2024</h6>
-                    <a href="/viewgallery3" style = {{ margin : "90px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div> 
-
-              <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={meeting}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>Meeting with The High Commissioner of Malaysia to Sri Lanka<br/>His Excellency Badli Hisham Adam.<br/><br/>  August 2024</h6>
-                    {/* <a href="/viewblood25" style = {{ margin : "40px 0px 0px 0px" }} class="btn btn-primary">See More</a> */}
-                  </div>
-                </div>
-              </div>
-
-              
-            </div>
-
-
-
-            <div class="row">
-            <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={bloodd}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>26th Blood Donation Campaign - <br/>  Lumbini Viharaya, Dalugama<br/><br/> 23rd May 2021 </h6>
-                    <a href="/viewblood26" style = {{ margin : "110px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={blood}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>25th Blood Donation Campaign - <br/> Lumbini Viharaya, Dalugama<br/><br/>  20th September 2020</h6>
-                    <a href="/viewblood25" style = {{ margin : "110px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={glocal}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>Glocal Teen Hero 2020<br/>Teens for Sustainable Development Goals<br/>  20th August 2020</h6>
-                    <a href="/global" style = {{ margin : "110px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div>
-
-              
-            </div>
-         
-
-
-
-
-
-            <div class="row">
-
-            <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={webinar} style ={{height:"200px"}} class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>International Online Workshop of Challenging issues and the role of Youth in New Normal  <br/><br/>  27th June 2020</h6>
-                    <a href="/webinar" style = {{ margin : "70px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div>
-
-            <div class="col">
-                <div class="card" style={{width:"330px", height:"480px",margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={club} class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                    <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>Established the Commonwealth Schools Club - <br/> Prince of Wales College, Moratuwa. <br/><br/> March 2020</h6>
-                    <a href="/viewclub" style = {{ margin : "80px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img src={sound}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>On International Volunteer Day CYN Sri Lanka has donated a sound system - <br/>  Blue Rose Special School in Kandy. <br/><br/> December 2015</h6>
-                    <a href="/viewsound" style = {{ margin : "70px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div>
-
-              
-
-              
-            </div>
-
-
-
-
-            
-            <div class="row">
-            <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img style ={{height:"200px"}} src={common}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>Commonwealth Day Celebration 2015 <br/><br/>Commonweath Youth Network, National Youth Service Council and State Ministry of Youth Affairs<br/> 09th of March 2015</h6>
-                    <a href="/cdaycelebrate" style = {{ margin : "60px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div> 
-
-              <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-              <img src={eye}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>Eye Donation Registration Campaign - <br/> Alawala Raja Maha Viharaya & <br/> Sri Ariyasingharamaya at Attanagalle <br/><br/>  18th October 2013</h6>
-                    <a href="/vieweye" style = {{ margin : "100px 0px 0px 0px" }} class="btn btn-primary">See More</a>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col">
-              <div class="card" style={{width:"330px", height:"480px", margin:"20px", boxShadow: "2px 2px 10px rgba(0,0,0,0.1)" }}>
-                  <img style ={{height:"200px"}} src={kite}  class="card-img-top" alt="..."/>
-                  <div class="card-body">
-                  <h6 class="card-title" style = {{ fontWeight:"bold", margin: "20px 0px 0px 0px", textAlign:"left"}}>International Kite Festival - <br/> Kite Sri Lanak<br/><br/>  2013 June</h6>
-                    {/* <a href="/viewblood25" style = {{ margin : "110px 0px 0px 0px" }} class="btn btn-primary">See More</a> */}
-                  </div>
-                </div>
-              </div>
-
-              
-            </div>
-          </div>
-
-
-
-          <Footer/>
-      </div>
-  )
-}
-
-export default Gallery
+export default Gallery;

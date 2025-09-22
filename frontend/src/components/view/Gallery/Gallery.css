@@ -1,0 +1,135 @@
+/* Gallery.css */
+.gallery-card {
+    border: none !important;
+    transition: all 0.3s ease-in-out;
+}
+
+.gallery-card:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.gallery-card img {
+    transition: transform 0.3s ease-in-out;
+}
+
+.gallery-card:hover img {
+    transform: scale(1.05);
+}
+
+.card-img-top {
+    border-radius: 0.375rem 0.375rem 0 0;
+}
+
+.gallery-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    font-size: 1.2rem;
+    color: #6c757d;
+}
+
+.category-filter {
+    margin-bottom: 2rem;
+}
+
+.category-btn {
+    margin: 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.category-btn:hover {
+    transform: translateY(-2px);
+}
+
+.gallery-grid {
+    margin-bottom: 3rem;
+}
+
+.load-more-btn {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.load-more-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+}
+
+.load-more-btn:disabled {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .gallery-card {
+        margin: 0 auto 1.5rem auto;
+        max-width: 350px;
+    }
+    
+    .category-filter {
+        padding: 0 1rem;
+    }
+    
+    .category-btn {
+        margin: 0.2rem;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .gallery-card {
+        max-width: 100%;
+    }
+}
+
+/* Loading spinner animations */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner-border {
+    animation: spin 1s linear infinite;
+}
+
+/* Fade in animation for new cards */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.gallery-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Badge styling */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+/* Alert styling */
+.alert {
+    border-radius: 0.5rem;
+    border: none;
+}
+
+.alert-info {
+    background-color: #e7f3ff;
+    color: #0c5460;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
